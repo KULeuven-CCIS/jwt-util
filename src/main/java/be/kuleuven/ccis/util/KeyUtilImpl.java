@@ -6,9 +6,7 @@ import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.security.Security;
@@ -28,7 +26,7 @@ public class KeyUtilImpl implements KeyUtil {
         PEMParser pemParser = null;
         try {
             // Parse the EC key pair
-            pemParser = new PEMParser(new InputStreamReader(new FileInputStream(pemFileLocation)));
+            pemParser = new PEMParser(new InputStreamReader(getInputStream(pemFileLocation)));
             PEMKeyPair pemKeyPair = (PEMKeyPair) pemParser.readObject();
 
             // Convert to Java (JCA) format
@@ -44,7 +42,7 @@ public class KeyUtilImpl implements KeyUtil {
         PEMParser pemParser = null;
         try {
             // Parse the EC key pair
-            pemParser = new PEMParser(new InputStreamReader(new FileInputStream(pemFileLocation)));
+            pemParser = new PEMParser(new InputStreamReader(getInputStream(pemFileLocation)));
             SubjectPublicKeyInfo pemKeyPair = (SubjectPublicKeyInfo) pemParser.readObject();
 
             // Convert to Java (JCA) format
@@ -53,5 +51,16 @@ public class KeyUtilImpl implements KeyUtil {
             throw new IOException("Could not parse or convert public key.");
         }
 
+    }
+
+    private InputStream getInputStream(final String path) throws FileNotFoundException {
+        if (path.startsWith("classpath:")) {
+            final ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+            return classloader.getResourceAsStream(path.replace("classpath:", ""));
+        } else if (path.startsWith("file:")) {
+            return new FileInputStream(path.replace("file:", ""));
+        } else {
+            return new FileInputStream(path);
+        }
     }
 }

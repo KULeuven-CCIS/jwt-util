@@ -1,6 +1,6 @@
 package be.kuleuven.ccis.util.exceptions;
 
-public class JWTParseException extends RuntimeException {
+public class JWTParseException extends Exception {
     public JWTParseException() {
         super();
     }

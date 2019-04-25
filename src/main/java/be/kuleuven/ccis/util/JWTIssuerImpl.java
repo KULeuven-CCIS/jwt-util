@@ -7,6 +7,7 @@ import com.nimbusds.jwt.SignedJWT;
 
 import java.io.IOException;
 import java.security.KeyPair;
+import java.security.PublicKey;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,25 +17,34 @@ import static be.kuleuven.ccis.util.JWTHelper.getJWSSigner;
 
 public class JWTIssuerImpl implements JWTIssuer {
     private final static Logger LOGGER = Logger.getLogger(JWTIssuerImpl.class.getName());
-    private final JWTFactory jwtFactory;
     private final KeyPair issuerKeyPair;
-    private final KeyPair consumerKeyPair;
+    private final PublicKey consumerPublicKey;
     private final String issuer;
+    private final JWEAlgorithm jweAlgorithm;
+    private final JWSAlgorithm jwsAlgorithm;
+    private final EncryptionMethod encryptionMethod;
 
-    private JWTIssuerImpl(JWTFactory jwtFactory, KeyPair issuerKeyPair, KeyPair consumerKeyPair, String issuer) {
-        assert jwtFactory != null : "JWT factory should be initialized";
+    private JWTIssuerImpl(KeyPair issuerKeyPair, PublicKey consumerPublicKey, String issuer, JWEAlgorithm jweAlgorithm, JWSAlgorithm jwsAlgorithm, EncryptionMethod encryptionMethod) {
         assert issuerKeyPair != null : "Please define the issuer keypair";
-        assert consumerKeyPair != null : "Please define the consumer keypair";
+        assert consumerPublicKey != null : "Please define the consumer public key";
         assert issuer != null && !issuer.isEmpty() : "Please define an issuer";
-        this.jwtFactory = jwtFactory;
+        assert jweAlgorithm != null : "Please define a jwe algorithm";
+        assert jwsAlgorithm != null : "Please define a jws algorithm";
+        assert encryptionMethod != null : "Please define an encryptionMethod";
+        this.jweAlgorithm = jweAlgorithm;
+        this.jwsAlgorithm = jwsAlgorithm;
+        this.encryptionMethod = encryptionMethod;
         this.issuerKeyPair = issuerKeyPair;
-        this.consumerKeyPair = consumerKeyPair;
+        this.consumerPublicKey = consumerPublicKey;
         this.issuer = issuer;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public String create(String userId) throws JWTCreationFailedException {
-        return new JWTBuilder(userId)
+    public String create(String subject) throws JWTCreationFailedException {
+        return new JWTBuilder(subject)
                 .sign()
                 .encrypt()
                 .build();
@@ -48,6 +58,51 @@ public class JWTIssuerImpl implements JWTIssuer {
                 .build();
     }
 
+    public static class JWTUtilIssuerBuilder {
+        private KeyPair issuerKeyPair;
+        final KeyUtil u = new KeyUtilImpl();
+        private PublicKey consumerPublicKey;
+
+        private String issuer;
+        private JWEAlgorithm jweAlgorithm = JWEAlgorithm.ECDH_ES;
+        private JWSAlgorithm jwsAlgorithm = JWSAlgorithm.ES512;
+        private EncryptionMethod encryptionMethod = EncryptionMethod.A128CBC_HS256;
+
+        public JWTUtilIssuerBuilder setIssuer(final String issuer) {
+            this.issuer = issuer;
+            return this;
+        }
+
+        public JWTUtilIssuerBuilder setIssuerKeyPair(final String issuerKeyPairLocation) throws IOException {
+            this.issuerKeyPair = u.parseKeyPair(issuerKeyPairLocation);
+            return this;
+        }
+
+        public JWTUtilIssuerBuilder setConsumerPublicKey(final String consumerPublicKeyLocation) throws IOException {
+            this.consumerPublicKey = u.parsePublicKey(consumerPublicKeyLocation);
+            return this;
+        }
+
+        public JWTUtilIssuerBuilder setJweAlgorithm(String jwsAlgorithm) {
+            this.jwsAlgorithm = JWSAlgorithm.parse(jwsAlgorithm);
+            return this;
+        }
+
+        public JWTUtilIssuerBuilder setJwsAlgorithm(String jweAlgorithm) {
+            this.jweAlgorithm = JWEAlgorithm.parse(jweAlgorithm);
+            return this;
+        }
+
+        public JWTUtilIssuerBuilder setEncryptionMethod(String encryptionMethod) {
+            this.encryptionMethod = EncryptionMethod.parse(encryptionMethod);
+            return this;
+        }
+
+        public JWTIssuerImpl build() {
+            return new JWTIssuerImpl(this.issuerKeyPair, this.consumerPublicKey, this.issuer, this.jweAlgorithm, this.jwsAlgorithm, this.encryptionMethod);
+        }
+    }
+
     private class JWTBuilder {
         private JWTClaimsSet claimsSet;
         private SignedJWT signedJWT;
@@ -58,7 +113,7 @@ public class JWTIssuerImpl implements JWTIssuer {
         }
 
         JWTBuilder sign() throws JWTCreationFailedException {
-            signedJWT = new SignedJWT(new JWSHeader(jwtFactory.getJWSAlgorithm()), claimsSet);
+            signedJWT = new SignedJWT(new JWSHeader(jwsAlgorithm), claimsSet);
             try {
                 signedJWT.sign(getJWSSigner(issuerKeyPair.getPrivate()));
             } catch (Exception e) {
@@ -70,14 +125,14 @@ public class JWTIssuerImpl implements JWTIssuer {
 
         JWTBuilder encrypt() throws JWTCreationFailedException {
             jweObject = new JWEObject(
-                    new JWEHeader.Builder(jwtFactory.getJWEAlgorithm(), jwtFactory.getJWEEncryptionMethod())
+                    new JWEHeader.Builder(jweAlgorithm, encryptionMethod)
                             .contentType("JWT") // required to signal nested JWT
                             .build(),
                     new Payload(signedJWT));
 
             // Perform encryption
             try {
-                jweObject.encrypt(getJWEEncrypter(consumerKeyPair.getPublic()));
+                jweObject.encrypt(getJWEEncrypter(consumerPublicKey));
                 LOGGER.log(Level.FINE, String.format("Created encrypted + signed jwt: %s", jweObject.serialize()));
 
             } catch (Exception e) {
@@ -96,40 +151,6 @@ public class JWTIssuerImpl implements JWTIssuer {
                 return claimsSet.toString();
             }
 
-        }
-    }
-
-    public class JWTUtilIssuerBuilder {
-        private JWTFactory jwtFactory;
-
-        private KeyPair issuerKeyPair;
-        private KeyPair consumerKeyPair;
-
-        private String issuer;
-
-        public JWTUtilIssuerBuilder setIssuer(final String issuer) {
-            this.issuer = issuer;
-            return this;
-        }
-
-        public JWTUtilIssuerBuilder setKeys(final String issuerKeyPairLocation, final String consumerKeyPairLocation) throws IOException {
-            final KeyUtil u = new KeyUtilImpl();
-            this.issuerKeyPair = u.parseKeyPair(issuerKeyPairLocation);
-            this.consumerKeyPair = u.parseKeyPair(consumerKeyPairLocation);
-            return this;
-        }
-
-        public JWTUtilIssuerBuilder setJWTProperties(JWSAlgorithm jwsAlgorithm, JWEAlgorithm jweAlgorithm, EncryptionMethod encryptionMethod) {
-            this.jwtFactory = new DefaultJWTFactoryImpl(jwsAlgorithm, jweAlgorithm, encryptionMethod);
-            return this;
-        }
-
-        public JWTIssuerImpl build() {
-            if (this.jwtFactory == null) {
-                //Define the default implementation if not issued
-                this.jwtFactory = new DefaultJWTFactoryImpl();
-            }
-            return new JWTIssuerImpl(this.jwtFactory, this.issuerKeyPair, this.consumerKeyPair, this.issuer);
         }
     }
 
