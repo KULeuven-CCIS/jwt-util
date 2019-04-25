@@ -4,19 +4,19 @@ import be.kuleuven.ccis.util.exceptions.JWTCreationFailedException;
 import com.nimbusds.jose.*;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static be.kuleuven.ccis.util.JWTHelper.getJWEEncrypter;
 import static be.kuleuven.ccis.util.JWTHelper.getJWSSigner;
 
 public class JWTIssuerImpl implements JWTIssuer {
-    private final static Logger LOGGER = Logger.getLogger(JWTIssuerImpl.class.getName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(JWTIssuer.class);
     private final KeyPair issuerKeyPair;
     private final PublicKey consumerPublicKey;
     private final String issuer;
@@ -133,7 +133,7 @@ public class JWTIssuerImpl implements JWTIssuer {
             // Perform encryption
             try {
                 jweObject.encrypt(getJWEEncrypter(consumerPublicKey));
-                LOGGER.log(Level.FINE, String.format("Created encrypted + signed jwt: %s", jweObject.serialize()));
+                LOGGER.debug("Created encrypted + signed jwt: {}", jweObject.serialize());
 
             } catch (Exception e) {
                 e.printStackTrace();

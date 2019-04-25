@@ -5,6 +5,8 @@ import be.kuleuven.ccis.util.exceptions.JWTValidationException;
 import com.nimbusds.jose.*;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.KeyPair;
@@ -18,15 +20,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static be.kuleuven.ccis.util.JWTHelper.getJWSVerifier;
 import static java.time.Duration.parse;
 
 public class JWTConsumerImpl implements JWTConsumer {
-    private final static Logger LOGGER = Logger.getLogger(JWTConsumerImpl.class.getName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(JWTConsumerImpl.class);
     private final KeyPair consumerPrivateKeyPair;
     private final Set<JWEAlgorithm> supportedJweAlgorithms;
     private final Set<JWSAlgorithm> supportedJwsAlgorithms;
@@ -64,7 +64,7 @@ public class JWTConsumerImpl implements JWTConsumer {
                     .get();
 
         } catch (JWTParseException | JWTValidationException e) {
-            LOGGER.log(Level.WARNING, "Unable to parse or validate JWT: {}", e.getMessage());
+            LOGGER.warn("Unable to parse or validate JWT: {}", e.getMessage());
         }
         return null;
 
@@ -141,9 +141,9 @@ public class JWTConsumerImpl implements JWTConsumer {
                 throw new JWTParseException("There is no JWE object present to check");
             } else if (!supportedJweAlgorithms.contains(jweObject.getHeader().getAlgorithm()) ||
                     !supportedEncryptionMethods.contains(jweObject.getHeader().getEncryptionMethod())) {
-                LOGGER.log(Level.WARNING, String.format("JWE was encrypted using a different algorithm (%s) or encryption method (%s)",
+                LOGGER.warn("JWE was encrypted using a different algorithm ({}) or encryption method ({})",
                         jweObject.getHeader().getAlgorithm(),
-                        jweObject.getHeader().getEncryptionMethod()));
+                        jweObject.getHeader().getEncryptionMethod());
                 throw new JWTParseException("Could not decrypt JWE: unknown algorithm or encryption method");
             }
 
@@ -159,7 +159,7 @@ public class JWTConsumerImpl implements JWTConsumer {
         JWTChecker extractSignedJWT() throws JWTParseException {
             this.jwt = jweObject.getPayload().toSignedJWT();
             if (!supportedJwsAlgorithms.contains(jwt.getHeader().getAlgorithm())) {
-                LOGGER.log(Level.WARNING, String.format("JWS was signed using a different algorithm (%s)", jwt.getHeader().getAlgorithm()));
+                LOGGER.warn("JWS was signed using a different algorithm ({})", jwt.getHeader().getAlgorithm());
                 throw new JWTParseException("Unknown signing algorithm.");
             }
             return this;
@@ -174,12 +174,12 @@ public class JWTConsumerImpl implements JWTConsumer {
             }
 
             if (claimsSet.getIssuer() == null || claimsSet.getSubject() == null || claimsSet.getIssueTime() == null) {
-                LOGGER.log(Level.WARNING, String.format("JWT did not contain the required elements: sub, iat, iss: %s", claimsSet.toJSONObject().toJSONString()));
+                LOGGER.warn("JWT did not contain the required elements: sub, iat, iss: {}", claimsSet.toJSONObject().toJSONString());
                 throw new JWTValidationException("The JWT does not contain the required elements.");
             }
 
             if (!trustedIssuers.containsKey(claimsSet.getIssuer())) {
-                LOGGER.log(Level.WARNING, String.format("JWS did not came from a trusted issuer: %s", claimsSet.getIssuer()));
+                LOGGER.warn("JWS did not came from a trusted issuer: {}", claimsSet.getIssuer());
                 throw new JWTValidationException("JWT issuer not recognized.");
             }
 
@@ -189,15 +189,15 @@ public class JWTConsumerImpl implements JWTConsumer {
         JWTChecker verifyJWT() throws JWTValidationException {
             try {
                 if (jwt.verify(getJWSVerifier(trustedIssuers.get(claimsSet.getIssuer())))) {
-                    LOGGER.info(String.format("Signature of JWT signed by %s is correct", claimsSet.getIssuer()));
+                    LOGGER.info("Signature of JWT signed by {} is correct", claimsSet.getIssuer());
                     final ZonedDateTime issueTime = ZonedDateTime.ofInstant(claimsSet.getIssueTime().toInstant(), ZoneId.systemDefault());
 
                     if (issueTime.plus(expirationDuration).isAfter(ZonedDateTime.now())) {
-                        LOGGER.log(Level.FINE, String.format("JWT is valid for user %s. JWT was created at: %s", claimsSet.getSubject(), issueTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)));
+                        LOGGER.debug("JWT is valid for user {}. JWT was created at: {}", claimsSet.getSubject(), issueTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
                     } else {
-                        LOGGER.log(Level.WARNING, String.format("JWT has expired. Issued at %s. Expiration at %s.",
+                        LOGGER.warn("JWT has expired. Issued at {}. Expiration at {}.",
                                 issueTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-                                issueTime.plus(expirationDuration).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)));
+                                issueTime.plus(expirationDuration).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
                         throw new JWTValidationException("JWT is expired.");
                     }
 
