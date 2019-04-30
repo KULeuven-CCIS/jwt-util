@@ -7,6 +7,41 @@
     <groupId>be.kuleuven.ccis.util</groupId>
     <artifactId>jwt</artifactId>
     <version>1.0-SNAPSHOT</version>
+
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>Allows the creation of a signed and encrypted JWT which contains the subject. The same package can
+        decrypt and verify the JWT and extract the subject from it.
+    </description>
+    <url>https://github.com/KULeuven-CCIS/jwt-util</url>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Tom De Dobbeleer</name>
+            <email>tom.dedobbeleer@kuleuven.be</email>
+            <organization>KU Leuven</organization>
+            <organizationUrl>https://www.kuleuven.be</organizationUrl>
+        </developer>
+        <developer>
+            <name>Philip Brusten</name>
+            <email>philip.brusten@kuleuven.be</email>
+            <organization>KU Leuven</organization>
+            <organizationUrl>https://www.kuleuven.be</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/KULeuven-CCIS/jwt-util.git</connection>
+        <developerConnection>scm:git:ssh://github.com:KULeuven-CCIS/jwt-util.git</developerConnection>
+        <url>https://github.com/KULeuven-CCIS/jwt-util/tree/master</url>
+    </scm>
+
     <build>
         <plugins>
             <plugin>
@@ -17,6 +52,65 @@
                     <source>8</source>
                     <target>8</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                            <keyname>${gpg.keyname}</keyname>
+                            <passphraseServerId>${gpg.keyname}</passphraseServerId>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <source>8</source>
+                    <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
@@ -91,5 +185,15 @@
 
     </dependencies>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
 </project>
