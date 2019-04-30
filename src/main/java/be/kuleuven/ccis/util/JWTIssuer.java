@@ -7,6 +7,8 @@ import be.kuleuven.ccis.util.exceptions.JWTCreationFailedException;
  */
 public interface JWTIssuer {
     /**
+     * Creates an encrypted and signed JWT with the subject as content for the consumer to read.
+     *
      * @param subject The subject (mostly user) for whom the JWT is created.
      * @return The JWT String in its full glory.
      * @throws JWTCreationFailedException

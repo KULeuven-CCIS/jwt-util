@@ -4,8 +4,17 @@ import java.util.Date;
 import java.util.Objects;
 
 public class JWT {
+    /**
+     * The subject of the JWT, usually a username
+     */
     private String subject;
+    /**
+     * The issuer of the JWT token, usually a URL
+     */
     private String issuer;
+    /**
+     * The expiration date of the token
+     */
     private Date expirationDate;
 
     public JWT(String subject, String issuer, Date expirationDate) {
