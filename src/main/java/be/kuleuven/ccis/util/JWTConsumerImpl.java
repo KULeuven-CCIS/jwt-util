@@ -1,5 +1,6 @@
 package be.kuleuven.ccis.util;
 
+import be.kuleuven.ccis.util.exceptions.BootstrapException;
 import be.kuleuven.ccis.util.exceptions.JWTParseException;
 import be.kuleuven.ccis.util.exceptions.JWTValidationException;
 import com.nimbusds.jose.*;
@@ -79,8 +80,12 @@ public class JWTConsumerImpl implements JWTConsumer {
         private Duration expirationDuration;
         private Map<String, PublicKey> trustedIssuers;
 
-        public JWTConsumerBuilder setPrivateKeyPair(final String consumerPrivateKeyLocation) throws IOException {
-            this.consumerPrivateKeyPair = u.parseKeyPair(consumerPrivateKeyLocation);
+        public JWTConsumerBuilder setPrivateKeyPair(final String consumerPrivateKeyLocation) {
+            try {
+                this.consumerPrivateKeyPair = u.parseKeyPair(consumerPrivateKeyLocation);
+            } catch (IOException e) {
+                throw new BootstrapException("Could not load consumer private key. Check the location.");
+            }
             return this;
         }
 
@@ -110,7 +115,7 @@ public class JWTConsumerImpl implements JWTConsumer {
                 try {
                     this.trustedIssuers.put(key, u.parsePublicKey(value));
                 } catch (IOException ex) {
-                    ex.printStackTrace();
+                    throw new BootstrapException("Could not load issuer public key. Check the location.");
                 }
             });
             return this;

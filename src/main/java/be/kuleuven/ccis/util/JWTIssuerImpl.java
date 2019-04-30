@@ -1,5 +1,6 @@
 package be.kuleuven.ccis.util;
 
+import be.kuleuven.ccis.util.exceptions.BootstrapException;
 import be.kuleuven.ccis.util.exceptions.JWTCreationFailedException;
 import com.nimbusds.jose.*;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -73,13 +74,21 @@ public class JWTIssuerImpl implements JWTIssuer {
             return this;
         }
 
-        public JWTUtilIssuerBuilder setIssuerKeyPair(final String issuerKeyPairLocation) throws IOException {
-            this.issuerKeyPair = u.parseKeyPair(issuerKeyPairLocation);
+        public JWTUtilIssuerBuilder setIssuerKeyPair(final String issuerKeyPairLocation) {
+            try {
+                this.issuerKeyPair = u.parseKeyPair(issuerKeyPairLocation);
+            } catch (IOException e) {
+                throw new BootstrapException("Could not load issuer private key. Check the location.");
+            }
             return this;
         }
 
-        public JWTUtilIssuerBuilder setConsumerPublicKey(final String consumerPublicKeyLocation) throws IOException {
-            this.consumerPublicKey = u.parsePublicKey(consumerPublicKeyLocation);
+        public JWTUtilIssuerBuilder setConsumerPublicKey(final String consumerPublicKeyLocation) {
+            try {
+                this.consumerPublicKey = u.parsePublicKey(consumerPublicKeyLocation);
+            } catch (IOException e) {
+                throw new BootstrapException("Could not load consumer public key. Check the location.");
+            }
             return this;
         }
 
