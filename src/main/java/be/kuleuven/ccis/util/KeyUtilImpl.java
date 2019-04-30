@@ -55,7 +55,7 @@ public class KeyUtilImpl implements KeyUtil {
 
     private InputStream getInputStream(final String path) throws FileNotFoundException {
         if (path.startsWith("classpath:")) {
-            final ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+            final ClassLoader classloader = getClass().getClassLoader();
             return classloader.getResourceAsStream(path.replace("classpath:", ""));
         } else if (path.startsWith("file:")) {
             return new FileInputStream(path.replace("file:", ""));
