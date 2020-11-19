@@ -179,7 +179,7 @@ public class JWTConsumerImpl implements JWTConsumer {
             }
 
             if (claimsSet.getIssuer() == null || claimsSet.getSubject() == null || claimsSet.getIssueTime() == null) {
-                LOGGER.warn("JWT did not contain the required elements: sub, iat, iss: {}", claimsSet.toJSONObject().toJSONString());
+                LOGGER.warn("JWT did not contain the required elements: sub, iat, iss: {}", claimsSet.toJSONObject().toString());
                 throw new JWTValidationException("The JWT does not contain the required elements.");
             }
 
